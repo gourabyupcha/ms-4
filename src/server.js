@@ -3,19 +3,29 @@ const http = require('http');
 const app = require('./app');
 const { redisClient } = require('./config/redisClient');
 const { connectToDatabase } = require('./config/mongo');
+const { connectRabbitMQ } = require('./utils/rabbitmq');
+const { consumeBookingAccepted } = require('./consumers/bookingAccepted');
 
 const PORT = process.env.PORT || 4444;
 
 const server = http.createServer(app);
 
+// (async () => {
+//   await connectToDatabase();
+
+//   server.listen(PORT, () => {
+//     console.log(`🚀 Server listening on port ${PORT}`);
+//   });
+// })();
+
+
 (async () => {
   await connectToDatabase();
+  await connectRabbitMQ();
+  await consumeBookingAccepted();
 
-  server.listen(PORT, () => {
-    console.log(`🚀 Server listening on port ${PORT}`);
-  });
+  app.listen(5002, () => console.log('🚀 Payment Service running'));
 })();
-
 
 // Graceful shutdown
 process.on('SIGINT', shutdown);

@@ -36,7 +36,7 @@ function getServiceCollection() {
   if (!db) {
     throw new Error("Database not connected. Call connectToDatabase() first.");
   }
-  return db.collection("services");
+  return db.collection("payments");
 }
 
 module.exports = {

@@ -1,27 +1,21 @@
-const { v4: uuidv4 } = require('uuid');
+const Payment = require('../models/Payment');
 
-const payments = new Map(); // In-memory store
+exports.processPayment = async (bookingData) => {
+  const { bookingId, buyerId, sellerId } = bookingData;
+  const amount = 500;
 
-exports.createPayment = async ({ amount, currency, method }) => {
-  const id = uuidv4();
-  const payment = {
-    id,
-    amount,
-    currency,
-    method,
-    status: 'PENDING',
-    createdAt: new Date(),
+  const payment = new Payment({ bookingId, buyerId, sellerId, amount });
+  await payment.save();
+
+  const success = Math.random() > 0.2;
+  payment.status = success ? 'success' : 'failed';
+  payment.transactionId = `txn_${Date.now()}`;
+  await payment.save();
+
+  return {
+    bookingId,
+    paymentId: payment._id,
+    status: payment.status,
+    transactionId: payment.transactionId
   };
-
-  // Simulate async payment processing (e.g., calling Stripe)
-  setTimeout(() => {
-    payment.status = 'COMPLETED'; // Simulated payment success
-  }, 2000);
-
-  payments.set(id, payment);
-  return payment;
-};
-
-exports.getPaymentById = async (id) => {
-  return payments.get(id);
 };
