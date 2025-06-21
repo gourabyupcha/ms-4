@@ -5,6 +5,7 @@ const { redisClient } = require('./config/redisClient');
 const { connectToDatabase } = require('./config/mongo');
 const { connectRabbitMQ } = require('./utils/rabbitmq');
 const { consumeBookingAccepted } = require('./consumers/bookingAccepted');
+require('dotenv').config();
 
 const PORT = process.env.PORT || 4444;
 
@@ -24,7 +25,7 @@ const server = http.createServer(app);
   await connectRabbitMQ();
   await consumeBookingAccepted();
 
-  app.listen(5002, () => console.log('🚀 Payment Service running'));
+  app.listen(PORT, () => console.log('🚀 Payment Service running'));
 })();
 
 // Graceful shutdown

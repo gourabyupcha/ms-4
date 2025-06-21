@@ -2,13 +2,13 @@ const paymentService = require('../services/payment.service');
 
 exports.createPayment = async (req, res, next) => {
   try {
-    const { amount, currency, method } = req.body;
+    const { amount, currency, bookingId } = req.body;
 
-    if (!amount || !currency || !method) {
+    if (!amount || !currency || !bookingId) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const payment = await paymentService.createPayment({ amount, currency, method });
+    const payment = await paymentService.createOrder({ amount, currency, bookingId });
     res.status(201).json(payment);
   } catch (err) {
     next(err);
