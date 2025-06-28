@@ -32,14 +32,14 @@ async function connectToDatabase() {
   }
 }
 
-function getServiceCollection() {
+function getOrdersCollection() {
   if (!db) {
     throw new Error("Database not connected. Call connectToDatabase() first.");
   }
-  return db.collection("payments");
+  return db.collection("payment_orders");
 }
 
 module.exports = {
   connectToDatabase,
-  getServiceCollection
+  getOrdersCollection
 };

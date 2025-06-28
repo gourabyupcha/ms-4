@@ -2,20 +2,37 @@ const Payment = require('../models/Payment');
 const crypto = require('crypto');
 const razorpay = require('../config/razorpay'); // adjust path to your razorpay instance
 const { validateWebhookSignature } = require('razorpay/dist/utils/razorpay-utils');
+const { getOrdersCollection } = require('../config/mongo');
 
-exports.createOrder = async ({ amount, currency, bookingId }) => {
+exports.createOrder = async ({ userId, amount, currency, bookingId }) => {
   try {
     const options = {
       amount: amount * 100, // Convert to paise
       currency,
-      receipt: bookingId
+      receipt: bookingId,
     };
 
+    const orders = getOrdersCollection();
     const order = await razorpay.orders.create(options);
 
-    // save order data to mongo
+    // Prepare the order data to save
+    const orderData = {
+      orderId: order.id, // Razorpay Order ID
+      amount: order.amount, // In paise
+      currency: order.currency,
+      receipt: order.receipt,
+      status: order.status, // 'created'
+      userId: userId,
+      bookingId: bookingId, // Your internal booking ID
+      amount_paid: order.amount_paid,
+      amount_due: order.amount_due,
+      created_at: new Date(order.created_at * 1000), // Razorpay gives timestamp in seconds
+      createdAt: new Date(), // Local timestamp for tracking
+    };
 
-    console.log(order)
+    // Insert into MongoDB
+    await orders.insertOne(orderData);
+    console.log(order);
     return order;
   } catch (error) {
     throw new Error('Error creating order: ' + error.message);
@@ -31,19 +48,26 @@ exports.verifyPayment = async (req, res) => {
   try {
     const isValidSignature = validateWebhookSignature(body, razorpay_signature, secret);
     if (isValidSignature) {
-      // Update the order with payment details
-      const orders = readData();
-      const order = orders.find(o => o.order_id === razorpay_order_id);
-      if (order) {
-        order.status = 'paid';
-        order.payment_id = razorpay_payment_id;
-        writeData(orders);
+      const orders = getOrdersCollection()
+      const result = await orders.updateOne(
+        { orderId: razorpay_order_id }, // Match by Razorpay order ID
+        {
+          $set: {
+            status: 'paid',
+            payment_id: razorpay_payment_id,
+            updatedAt: new Date(),
+          },
+        },
+      );
+
+      if (result.matchedCount === 0) {
+        console.log('No order found to update');
+      } else {
+        console.log('Order updated successfully');
       }
-      res.status(200).json({ status: 'ok' });
-      console.log("Payment verification successful");
+      return result;
     } else {
-      res.status(400).json({ status: 'verification_failed' });
-      console.log("Payment verification failed");
+      return ({ status: 'verification_failed' });
     }
   } catch (error) {
     console.error(error);
@@ -67,6 +91,6 @@ exports.processPayment = async (bookingData) => {
     bookingId,
     paymentId: payment._id,
     status: payment.status,
-    transactionId: payment.transactionId
+    transactionId: payment.transactionId,
   };
 };
